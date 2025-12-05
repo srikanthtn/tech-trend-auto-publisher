@@ -1,0 +1,75 @@
+# -------------------------
+# Python & FastAPI
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtual environments
+venv/
+bassenv/
+
+# Local environment variables
+.env
+
+# Byte-compiled / cache
+*.log
+*.pid
+
+# -------------------------
+# Node / Frontend
+# -------------------------
+frontend/node_modules/
+package-lock.json
+
+# Build folders
+dist/
+build/
+
+# -------------------------
+# Media, Audio, Output
+# -------------------------
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp3
+*.mp4
+*.wav
+*.zip
+
+# Generated posts and outputs
+generated_posts/
+output/
+
+# Static/generated content
+*.ttf
+dynamic_instagram_post.png
+final_instagram_post.png
+instagram_post_auto.png
+post.png
+
+# Voices / audio folders
+voices/
+
+# -------------------------
+# AWS Lambda
+# -------------------------
+python.zip
+lambda req/
+lambda_req/
+lambda_req.zip
+
+# -------------------------
+# Docker
+# -------------------------
+.dockerignore
+
+# -------------------------
+# Other project-specific files
+# -------------------------
+data/
+classic_codes/

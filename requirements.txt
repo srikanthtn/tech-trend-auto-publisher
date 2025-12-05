@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+feedparser
+google-generativeai
+python-dotenv
+boto3

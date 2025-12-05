@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Webscrapeer Frontend</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
+    h1 { text-align: center; color: #333; }
+    form { margin-bottom: 32px; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; }
+    input, textarea { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #007bff; color: #fff; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .result { background: #e9ffe9; padding: 10px; border-radius: 4px; margin-bottom: 16px; }
+    .error { background: #ffe9e9; padding: 10px; border-radius: 4px; margin-bottom: 16px; color: #b30000; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Webscrapeer Frontend</h1>
+
+    <form id="scrapeForm">
+      <h2>Scrape</h2>
+      <label for="extraSites">Extra Sites (comma separated):</label>
+      <input type="text" id="extraSites" name="extraSites" placeholder="https://site1.com, https://site2.com">
+      <button type="submit">Run Scrape</button>
+    </form>
+
+
+    <form id="processForm">
+      <h2>Process</h2>
+      <button type="submit">Run Process (default file)</button>
+    </form>
+
+
+    <form id="classifyForm">
+      <h2>Classify</h2>
+      <label for="textKey">Text Key (optional):</label>
+      <input type="text" id="textKey" name="textKey" placeholder="summary">
+      <button type="submit">Run Classify (default files)</button>
+    </form>
+
+    <div id="result"></div>
+    <div id="outputView"></div>
+    <div id="downloadBtn"></div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8000"; // Change if backend runs elsewhere
+
+    function showResult(msg, isError=false) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `<div class="${isError ? 'error' : 'result'}">${msg}</div>`;
+    }
+
+    document.getElementById('scrapeForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const extraSites = document.getElementById('extraSites').value.split(',').map(s => s.trim()).filter(Boolean);
+      try {
+        const res = await fetch(`${API_BASE}/scrape`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ extra_sites: extraSites.length ? extraSites : undefined })
+        });
+        const data = await res.json();
+        if (res.ok) showResult(`Scraped Path: ${data.scraped_path}`);
+        else showResult(data.detail || "Error during scrape", true);
+      } catch (err) {
+        showResult("Network error: " + err, true);
+      }
+    };
+
+
+    document.getElementById('processForm').onsubmit = async function(e) {
+      e.preventDefault();
+      try {
+        const res = await fetch(`${API_BASE}/process`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showResult(`Processed Path: ${data.processed_path}`);
+          await showOutputView();
+        } else showResult(data.detail || "Error during process", true);
+      } catch (err) {
+        showResult("Network error: " + err, true);
+      }
+    };
+
+
+    document.getElementById('classifyForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const textKey = document.getElementById('textKey').value || "summary";
+      try {
+        const res = await fetch(`${API_BASE}/classify`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ text_key: textKey })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showResult(`Classified Path: ${data.classified_path}`);
+          await showOutputView();
+        } else showResult(data.detail || "Error during classify", true);
+      } catch (err) {
+        showResult("Network error: " + err, true);
+      }
+    };
+
+
+    // Show output file content and download button
+    async function showOutputView() {
+      try {
+        const res = await fetch(`${API_BASE}/view_output`);
+        const data = await res.json();
+        if (res.ok && data.content) {
+          document.getElementById('outputView').innerHTML = `<h3>Output File Content</h3><pre>${data.content}</pre>`;
+          document.getElementById('downloadBtn').innerHTML = `<a href="${API_BASE}/download_output" download><button>Download Output File</button></a>`;
+        } else {
+          document.getElementById('outputView').innerHTML = `<div class="error">Output file not found.</div>`;
+          document.getElementById('downloadBtn').innerHTML = "";
+        }
+      } catch (err) {
+        document.getElementById('outputView').innerHTML = `<div class="error">Error loading output: ${err}</div>`;
+        document.getElementById('downloadBtn').innerHTML = "";
+      }
+    }
+
+    // Test root endpoint on load and show output if exists
+    window.onload = async function() {
+      try {
+        const res = await fetch(`${API_BASE}/`);
+        const data = await res.json();
+        if (res.ok) showResult(data.message);
+        await showOutputView();
+      } catch (err) {
+        showResult("Backend not reachable: " + err, true);
+      }
+    };
+  </script>
+</body>
+</html>
