@@ -1,145 +1,1065 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <title>Webscrapeer Frontend</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebScraper Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
-    h1 { text-align: center; color: #333; }
-    form { margin-bottom: 32px; }
-    label { display: block; margin-bottom: 6px; font-weight: bold; }
-    input, textarea { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
-    button { background: #007bff; color: #fff; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    .result { background: #e9ffe9; padding: 10px; border-radius: 4px; margin-bottom: 16px; }
-    .error { background: #ffe9e9; padding: 10px; border-radius: 4px; margin-bottom: 16px; color: #b30000; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Webscrapeer Frontend</h1>
-
-    <form id="scrapeForm">
-      <h2>Scrape</h2>
-      <label for="extraSites">Extra Sites (comma separated):</label>
-      <input type="text" id="extraSites" name="extraSites" placeholder="https://site1.com, https://site2.com">
-      <button type="submit">Run Scrape</button>
-    </form>
-
-
-    <form id="processForm">
-      <h2>Process</h2>
-      <button type="submit">Run Process (default file)</button>
-    </form>
-
-
-    <form id="classifyForm">
-      <h2>Classify</h2>
-      <label for="textKey">Text Key (optional):</label>
-      <input type="text" id="textKey" name="textKey" placeholder="summary">
-      <button type="submit">Run Classify (default files)</button>
-    </form>
-
-    <div id="result"></div>
-    <div id="outputView"></div>
-    <div id="downloadBtn"></div>
-  </div>
-
-  <script>
-    const API_BASE = "http://localhost:8000"; // Change if backend runs elsewhere
-
-    function showResult(msg, isError=false) {
-      const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = `<div class="${isError ? 'error' : 'result'}">${msg}</div>`;
+    :root {
+      --bg-body: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --bg-card-hover: rgba(51, 65, 85, 0.8);
+      --primary: #8b5cf6;
+      --primary-gradient: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --success: #10b981;
+      --error: #ef4444;
+      --radius: 24px;
+      --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
     }
 
-    document.getElementById('scrapeForm').onsubmit = async function(e) {
-      e.preventDefault();
-      const extraSites = document.getElementById('extraSites').value.split(',').map(s => s.trim()).filter(Boolean);
-      try {
-        const res = await fetch(`${API_BASE}/scrape`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ extra_sites: extraSites.length ? extraSites : undefined })
-        });
-        const data = await res.json();
-        if (res.ok) showResult(`Scraped Path: ${data.scraped_path}`);
-        else showResult(data.detail || "Error during scrape", true);
-      } catch (err) {
-        showResult("Network error: " + err, true);
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-body);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(217, 70, 239, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.15) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .app-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    /* Top Left Date/Time Widget */
+    .datetime-widget {
+      position: absolute;
+      top: 40px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 180px;
+      z-index: 10;
+      transition: transform 0.3s ease;
+    }
+
+    .datetime-widget:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .time-display {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    .date-display {
+      font-size: 1rem;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .day-display {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 60px;
+      text-align: center;
+      padding-top: 40px;
+      /* Space for widget on mobile if needed, though widget is absolute */
+    }
+
+    header h1 {
+      font-weight: 800;
+      font-size: 3.5rem;
+      margin-bottom: 12px;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      box-shadow: 0 0 10px currentColor;
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.online {
+      background-color: var(--success);
+      color: var(--success);
+    }
+
+    .status-dot.offline {
+      background-color: var(--error);
+      color: var(--error);
+    }
+
+    /* Glass Card */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 32px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    /* Run All Section */
+    .run-all-card {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .run-all-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--primary-gradient);
+    }
+
+    .run-all-card h2 {
+      margin-top: 0;
+      font-size: 1.8rem;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .run-all-card p {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      font-size: 1rem;
+    }
+
+    .run-all-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 20px;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+
+    input {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      color: white;
+      padding: 16px;
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      background: rgba(0, 0, 0, 0.4);
+      border-color: #8b5cf6;
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+    }
+
+    button {
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      border-radius: 16px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Progress Steps */
+    .run-all-results {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.5s ease;
+      pointer-events: none;
+    }
+
+    .run-all-results.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .step-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+      transition: all 0.3s;
+    }
+
+    .step-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .step-status {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Step States */
+    .step-card.pending .step-icon {
+      color: var(--text-muted);
+    }
+
+    .step-card.running {
+      background: rgba(139, 92, 246, 0.1);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .step-card.running .step-icon {
+      background: var(--primary);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+
+    .step-card.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .step-card.success .step-icon {
+      background: var(--success);
+      color: white;
+    }
+
+    .step-card.success .step-status {
+      color: var(--success);
+    }
+
+    .step-card.failed {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .step-card.failed .step-icon {
+      background: var(--error);
+      color: white;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
       }
-    };
 
-
-    document.getElementById('processForm').onsubmit = async function(e) {
-      e.preventDefault();
-      try {
-        const res = await fetch(`${API_BASE}/process`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({})
-        });
-        const data = await res.json();
-        if (res.ok) {
-          showResult(`Processed Path: ${data.processed_path}`);
-          await showOutputView();
-        } else showResult(data.detail || "Error during process", true);
-      } catch (err) {
-        showResult("Network error: " + err, true);
+      70% {
+        box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
       }
-    };
 
-
-    document.getElementById('classifyForm').onsubmit = async function(e) {
-      e.preventDefault();
-      const textKey = document.getElementById('textKey').value || "summary";
-      try {
-        const res = await fetch(`${API_BASE}/classify`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ text_key: textKey })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          showResult(`Classified Path: ${data.classified_path}`);
-          await showOutputView();
-        } else showResult(data.detail || "Error during classify", true);
-      } catch (err) {
-        showResult("Network error: " + err, true);
+      100% {
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
       }
-    };
+    }
 
+    /* Output Section */
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--glass-border);
+    }
 
-    // Show output file content and download button
-    async function showOutputView() {
+    .output-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      color: #e2e8f0;
+      padding: 24px;
+      border-radius: 16px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      max-height: 500px;
+      border: 1px solid var(--glass-border);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Toast */
+    #status-area {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toast {
+      padding: 16px 24px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      min-width: 300px;
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--error);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .datetime-widget {
+        position: static;
+        margin-bottom: 20px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .run-all-form {
+        grid-template-columns: 1fr;
+      }
+
+      .run-all-results {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+      }
+    }
+
+    /* Content Selection Section */
+    .selection-section {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 32px;
+    }
+
+    .selection-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .selection-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: white;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .content-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content-card:hover {
+      border-color: #8b5cf6;
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .content-card.selected {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.1);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    }
+
+    .content-card h3 {
+      font-size: 1.1rem;
+      margin: 0 0 12px 0;
+      line-height: 1.4;
+      color: var(--text-main);
+    }
+
+    .content-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-grow: 1;
+    }
+
+    .content-card .category-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      align-self: flex-start;
+    }
+
+    .generated-image-preview {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 16px;
+      display: none;
+      border: 1px solid var(--glass-border);
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 20px;
+      align-items: flex-end;
+      padding-top: 24px;
+      border-top: 1px solid var(--glass-border);
+    }
+
+    /* Spinner for buttons */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-container">
+
+    <!-- Date/Time Widget -->
+    <div class="datetime-widget">
+      <div class="time-display" id="clockTime">00:00</div>
+      <div class="date-display" id="clockDate">Jan 01, 2025</div>
+      <div class="day-display" id="clockDay">Monday</div>
+    </div>
+
+    <header>
+      <h1>WebScraper Dashboard</h1>
+      <p>
+        <span id="status-dot" class="status-dot"></span>
+        <span id="connection-status">Connecting to backend...</span>
+      </p>
+    </header>
+
+    <!-- Run All Section -->
+    <div class="glass-card run-all-card">
+      <h2>🚀 Run All Processes</h2>
+      <p>Execute the complete pipeline: Scrape → Process → Classify in one seamless flow.</p>
+
+      <form id="runAllForm" class="run-all-form">
+        <div class="form-group">
+          <label for="runAllSites">Target URLs (Optional)</label>
+          <input type="text" id="runAllSites" placeholder="https://example.com, https://test.com">
+        </div>
+
+        <div class="form-group">
+          <label for="runAllTextKey">Classification Key (Optional)</label>
+          <input type="text" id="runAllTextKey" placeholder="e.g. summary">
+        </div>
+
+        <button type="submit" id="btn-run-all">
+          <span class="btn-text">Start Pipeline</span>
+        </button>
+      </form>
+
+      <div id="runAllResults" class="run-all-results">
+        <div id="stepScrape" class="step-card pending">
+          <div class="step-icon">🕷️</div>
+          <div class="step-name">Scrape</div>
+          <div class="step-status">Waiting...</div>
+        </div>
+        <div id="stepProcess" class="step-card pending">
+          <div class="step-icon">⚡</div>
+          <div class="step-name">Process</div>
+          <div class="step-status">Waiting...</div>
+        </div>
+        <div id="stepClassify" class="step-card pending">
+          <div class="step-icon">📂</div>
+          <div class="step-name">Classify</div>
+          <div class="step-status">Waiting...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instagram Content Selection Section -->
+    <div class="selection-section" id="selectionSection" style="display:none;">
+      <div class="selection-header">
+        <h2>📸 Select Content & Post to Instagram</h2>
+        <button onclick="loadContentCards()"
+          style="width: auto; padding: 10px 20px; font-size: 0.9rem; background: rgba(255,255,255,0.1);">
+          Refresh Cards
+        </button>
+      </div>
+
+      <div id="contentGrid" class="content-grid">
+        <!-- Cards will be injected here -->
+        <p style="color: var(--text-muted);">No content loaded. Run the pipeline first.</p>
+      </div>
+
+      <div class="action-bar">
+        <div style="flex: 1;">
+          <label for="igToken">Instagram Access Token</label>
+          <input type="password" id="igToken" placeholder="Paste your Graph API Access Token here">
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+          <button id="btn-generate" onclick="generateImagesForSelected()"
+            style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);">
+            <span class="spinner"></span>Generate Images
+          </button>
+          <button id="btn-post" onclick="postSelectedToInstagram()"
+            style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">
+            <span class="spinner"></span>Post to Instagram
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Section -->
+    <div class="glass-card">
+      <div class="output-header">
+        <h2>System Output</h2>
+        <div id="downloadBtn"></div>
+      </div>
+      <div id="outputView">
+        <p style="color: var(--text-muted); text-align: center; padding: 40px;">No output data generated yet.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="status-area"></div>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+    let loadedContent = {}; // Stores the full JSON content
+    let selectedItems = []; // Stores currently selected items
+
+    // --- CONTENT CARDS LOGIC ---
+
+    async function loadContentCards() {
+      const grid = document.getElementById('contentGrid');
+      const section = document.getElementById('selectionSection');
+
       try {
         const res = await fetch(`${API_BASE}/view_output`);
         const data = await res.json();
+
         if (res.ok && data.content) {
-          document.getElementById('outputView').innerHTML = `<h3>Output File Content</h3><pre>${data.content}</pre>`;
-          document.getElementById('downloadBtn').innerHTML = `<a href="${API_BASE}/download_output" download><button>Download Output File</button></a>`;
+          try {
+            loadedContent = JSON.parse(data.content);
+            section.style.display = 'block';
+            renderCards();
+          } catch (e) {
+            console.error("JSON Parse error", e);
+            // If content isn't JSON, we can't render cards
+          }
         } else {
-          document.getElementById('outputView').innerHTML = `<div class="error">Output file not found.</div>`;
-          document.getElementById('downloadBtn').innerHTML = "";
+          // No content
         }
       } catch (err) {
-        document.getElementById('outputView').innerHTML = `<div class="error">Error loading output: ${err}</div>`;
-        document.getElementById('downloadBtn').innerHTML = "";
+        console.error(err);
+        showToast("Error loading content cards", 'error');
       }
     }
 
-    // Test root endpoint on load and show output if exists
-    window.onload = async function() {
+    function renderCards() {
+      const grid = document.getElementById('contentGrid');
+      grid.innerHTML = '';
+      selectedItems = []; // Reset selection
+
+      // Iterate through categories
+      for (const [category, items] of Object.entries(loadedContent)) {
+        if (!Array.isArray(items)) continue;
+
+        items.forEach((item, index) => {
+          const card = document.createElement('div');
+          card.className = 'content-card';
+          card.onclick = () => toggleSelection(card, item, category);
+
+          const title = item.title || "No Title";
+          const summary = item.summary || "No Summary";
+
+          card.innerHTML = `
+            <span class="category-tag">${category}</span>
+            <h3>${title}</h3>
+            <p>${summary}</p>
+            <img class="generated-image-preview" id="img-${index}-${category.replace(/\s/g, '')}" src="" alt="Generated Preview">
+          `;
+
+          grid.appendChild(card);
+        });
+      }
+    }
+
+    function toggleSelection(card, item, category) {
+      card.classList.toggle('selected');
+      const isSelected = card.classList.contains('selected');
+
+      if (isSelected) {
+        // Add to selection
+        item._category = category; // Tag with category for backend
+        selectedItems.push(item);
+      } else {
+        // Remove from selection
+        selectedItems = selectedItems.filter(i => i !== item);
+      }
+    }
+
+    async function generateImagesForSelected() {
+      if (selectedItems.length === 0) {
+        showToast("Please select at least one card.", 'error');
+        return;
+      }
+
+      setLoading('btn-generate', true);
+
+      try {
+        const res = await fetch(`${API_BASE}/generate_images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: selectedItems,
+            category: selectedItems[0]._category || "General" // Simplified: uses first category
+          })
+        });
+        const data = await res.json();
+
+        if (data.results) {
+          // Update selected items with image URLs
+          selectedItems = data.results;
+
+          showToast(`Generated ${data.results.length} images!`, 'success');
+
+          // Try to update previews in place
+          const cards = document.querySelectorAll('.content-card.selected');
+          cards.forEach((card, i) => {
+            if (data.results[i] && data.results[i].image_url) {
+              const img = card.querySelector('.generated-image-preview');
+              img.src = data.results[i].image_url;
+              img.style.display = 'block';
+            }
+          });
+        }
+      } catch (err) {
+        showToast("Error generating images: " + err, 'error');
+      } finally {
+        setLoading('btn-generate', false);
+      }
+    }
+
+    async function postSelectedToInstagram() {
+      if (selectedItems.length === 0) {
+        showToast("Please select items first.", 'error');
+        return;
+      }
+
+      // Check if images are generated
+      const hasImages = selectedItems.every(i => i.image_url);
+      if (!hasImages) {
+        showToast("Please generate images for selected items first.", 'error');
+        return;
+      }
+
+      const token = document.getElementById('igToken').value;
+      if (!token) {
+        showToast("Please enter your Instagram Access Token.", 'error');
+        return;
+      }
+
+      setLoading('btn-post', true);
+
+      try {
+        const res = await fetch(`${API_BASE}/post_to_instagram`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: selectedItems,
+            access_token: token
+          })
+        });
+        const data = await res.json();
+
+        if (data.results) {
+          let successCount = data.results.filter(r => r.status === 'success').length;
+          if (successCount > 0) {
+            showToast(`Successfully posted ${successCount} items to Instagram!`, 'success');
+          } else {
+            showToast("Failed to post items. Check console/network.", 'error');
+          }
+        }
+      } catch (err) {
+        showToast("Error posting to Instagram: " + err, 'error');
+      } finally {
+        setLoading('btn-post', false);
+      }
+    }
+
+    // --- Clock Functionality ---
+    function updateClock() {
+      const now = new Date();
+
+      // Time
+      const timeStr = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      document.getElementById('clockTime').textContent = timeStr;
+
+      // Date
+      const dateStr = now.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      document.getElementById('clockDate').textContent = dateStr;
+
+      // Day
+      const dayStr = now.toLocaleDateString('en-US', { weekday: 'long' });
+      document.getElementById('clockDay').textContent = dayStr;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock(); // Initial call
+
+    // --- Toast Notification ---
+    function showToast(msg, type = 'success') {
+      const area = document.getElementById('status-area');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = type === 'success' ? '✅ ' + msg : '⚠️ ' + msg;
+      area.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // --- UI Helpers ---
+    function setStepStatus(stepId, status, message = '') {
+      const el = document.getElementById(stepId);
+      const icon = el.querySelector('.step-icon');
+      const statusText = el.querySelector('.step-status');
+
+      el.className = `step-card ${status}`;
+
+      if (status === 'running') {
+        statusText.textContent = 'Processing...';
+        icon.innerHTML = '⏳';
+      } else if (status === 'success') {
+        statusText.textContent = 'Completed';
+        icon.innerHTML = '✓';
+      } else if (status === 'failed') {
+        statusText.textContent = 'Failed';
+        icon.innerHTML = '✗';
+      } else {
+        statusText.textContent = 'Waiting...';
+      }
+
+      if (message) statusText.textContent = message;
+    }
+
+    function setLoading(isLoading) {
+      const btn = document.getElementById('btn-run-all');
+      if (isLoading) {
+        btn.disabled = true;
+        btn.innerHTML = 'Running...';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = 'Start Pipeline';
+      }
+    }
+
+    // --- Main Logic ---
+    document.getElementById('runAllForm').onsubmit = async function (e) {
+      e.preventDefault();
+      setLoading(true);
+
+      const extraSites = document.getElementById('runAllSites').value.split(',').map(s => s.trim()).filter(Boolean);
+      const textKey = document.getElementById('runAllTextKey').value || "summary";
+
+      // Reset UI
+      document.getElementById('runAllResults').classList.add('show');
+      ['stepScrape', 'stepProcess', 'stepClassify'].forEach(id => setStepStatus(id, 'pending'));
+
+      // Optimistic updates for better UX
+      setStepStatus('stepScrape', 'running');
+
+      try {
+        const res = await fetch(`${API_BASE}/run_all`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            extra_sites: extraSites.length ? extraSites : undefined,
+            text_key: textKey
+          })
+        });
+        const data = await res.json();
+
+        // Update Steps based on response
+        if (data.results) {
+          const r = data.results;
+          setStepStatus('stepScrape', r.scrape.status, r.scrape.status === 'success' ? 'Scraped' : r.scrape.error);
+          setStepStatus('stepProcess', r.process.status, r.process.status === 'success' ? 'Processed' : r.process.error);
+          setStepStatus('stepClassify', r.classify.status, r.classify.status === 'success' ? 'Classified' : r.classify.error);
+        }
+
+        if (data.status === 'success') {
+          showToast('Pipeline completed successfully!', 'success');
+          await showOutputView();
+          await loadContentCards();
+        } else {
+          showToast(`Pipeline failed: ${data.message}`, 'error');
+        }
+      } catch (err) {
+        showToast("Network error: " + err, 'error');
+        setStepStatus('stepScrape', 'failed', 'Network Error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    async function showOutputView() {
+      const viewContainer = document.getElementById('outputView');
+      const dlContainer = document.getElementById('downloadBtn');
+
+      viewContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Loading output...</p>';
+
+      try {
+        const res = await fetch(`${API_BASE}/view_output`);
+        const data = await res.json();
+
+        if (res.ok && data.content) {
+          let displayContent = data.content;
+          try {
+            const jsonObj = JSON.parse(data.content);
+            displayContent = JSON.stringify(jsonObj, null, 2);
+          } catch (e) { /* not json */ }
+
+          viewContainer.innerHTML = `<pre>${displayContent}</pre>`;
+
+          dlContainer.innerHTML = `
+            <a href="${API_BASE}/download_output" download style="text-decoration:none;">
+              <button type="button" style="width:auto; padding: 10px 20px; font-size:0.9rem;">
+                Download JSON
+              </button>
+            </a>`;
+        } else {
+          viewContainer.innerHTML = `<p style="color: var(--text-muted); text-align:center;">Output file is empty or missing.</p>`;
+          dlContainer.innerHTML = "";
+        }
+      } catch (err) {
+        viewContainer.innerHTML = `<p style="color: var(--error); text-align:center;">Error reading output: ${err}</p>`;
+      }
+    }
+
+    // Init
+    window.onload = async function () {
+      const statusText = document.getElementById('connection-status');
+      const statusDot = document.getElementById('status-dot');
+
       try {
         const res = await fetch(`${API_BASE}/`);
-        const data = await res.json();
-        if (res.ok) showResult(data.message);
-        await showOutputView();
+        if (res.ok) {
+          statusText.innerText = "System Online";
+          statusText.style.color = "var(--success)";
+          statusDot.className = "status-dot online";
+          await showOutputView();
+        } else {
+          throw new Error("Backend error");
+        }
       } catch (err) {
-        showResult("Backend not reachable: " + err, true);
+        statusText.innerText = "Backend Offline";
+        statusText.style.color = "var(--error)";
+        statusDot.className = "status-dot offline";
+        showToast("Backend not reachable", 'error');
       }
     };
   </script>
 </body>
+
 </html>

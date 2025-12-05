@@ -324,6 +324,7 @@ Return only the headline."""
     out_path = os.path.join(out_dir, f"post_{index}_{safe_title}.png")
     img.save(out_path)
     print(f"Saved -> {out_path}")
+    return out_path
 
 
 # ---------------------------

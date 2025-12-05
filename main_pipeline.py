@@ -157,8 +157,9 @@ def run_scraper(extra_sites=None):
             final_output.extend(site_data)
         except Exception as e:
             print(f"❌ Error scraping {site}: {e}")
-    scrape_date = datetime.utcnow().strftime("%Y%m%d")
-    output_filename = f"data/hybrid_scraped_filtered_{scrape_date}.json"
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)
+    output_filename = os.path.join(data_dir, "hybrid_scraped_data.json")
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(final_output, f, indent=4, ensure_ascii=False)
     print(f"\n✅ DONE → Saved to {output_filename}\n")
@@ -212,12 +213,16 @@ Now process these items:
     return response.text
 
 def run_processing(input_json_path):
+    if not os.path.exists(input_json_path):
+        raise FileNotFoundError(f"Input file not found: data/hybrid_scraped_data.json. Please run the scraper first.")
     with open(input_json_path, "r", encoding="utf-8") as f:
         items = json.load(f)
     print(f"📦 Total items to process: {len(items)}")
     print("⚡ Processing in ONE Gemini API call...")
     result_text = generate_batch_content(items)
-    output_filename = "output/educational_content.txt"
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    output_filename = os.path.join(output_dir, "educational_content.txt")
     with open(output_filename, "w", encoding="utf-8") as f:
         f.write(result_text)
     print(f"✅ Saved → {output_filename}")
@@ -254,6 +259,8 @@ def classify_content(text):
     return "Other"
 
 def run_classification(input_json_path, output_json_path, text_key="summary"):
+    if not os.path.exists(input_json_path):
+        raise FileNotFoundError(f"Input file not found: {input_json_path}. Please run the scraper and processing steps first.")
     with open(input_json_path, "r", encoding="utf-8") as f:
         content_list = json.load(f)
     result = {
@@ -270,6 +277,9 @@ def run_classification(input_json_path, output_json_path, text_key="summary"):
             text = str(item)
         category = classify_content(text)
         result[category].append(item)
+    output_dir = os.path.dirname(output_json_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     with open(output_json_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=4, ensure_ascii=False)
     print("Classification complete! Saved to:", output_json_path)
@@ -281,8 +291,8 @@ def run_classification(input_json_path, output_json_path, text_key="summary"):
 if __name__ == "__main__":
     # Step 1: Scrape
     scraped_json = run_scraper()
-    # Step 2: Process
-    run_processing(scraped_json)
-    # Step 3: Classify
-    classify_output = run_classification(scraped_json, f"output/classified_educational_content.json", text_key="summary")
+    # Step 2: Process (always use 'data/hybrid_scraped_data.json')
+    processed_txt = run_processing("data/hybrid_scraped_data.json")
+    # Step 3: Classify (always use 'data/hybrid_scraped_data.json')
+    classify_output = run_classification("data/hybrid_scraped_data.json", "output/classified_educational_content.json", text_key="summary")
     print("All steps complete. Final classified output:", classify_output)
