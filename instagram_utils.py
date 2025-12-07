@@ -41,6 +41,14 @@ def post_image_to_instagram(access_token, image_url, caption, instagram_account_
     """
     if not instagram_account_id:
         instagram_account_id = get_instagram_account_id(access_token)
+    
+    # Check for localhost/private URLs which Instagram cannot access
+    if "localhost" in image_url or "127.0.0.1" in image_url:
+        raise Exception(
+            "Instagram API requires a public image URL, but a local URL was provided. "
+            "Please use a tunneling tool like 'ngrok' to expose your local server, "
+            "or host the images publicly. Set the BASE_URL environment variable to your public URL."
+        )
         
     # 1. Create Media Container
     url = f"https://graph.facebook.com/v18.0/{instagram_account_id}/media"

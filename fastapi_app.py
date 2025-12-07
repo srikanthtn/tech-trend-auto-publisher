@@ -81,7 +81,9 @@ def generate_images(req: GenerateImagesRequest):
     Returns a list of items with an added 'image_url' field.
     """
     results = []
-    base_url = "http://localhost:8000" # Change this if running on a different host/port or behind ngrok
+    # Use BASE_URL environment variable if set, otherwise default to localhost
+    # This is crucial for Instagram API which needs a public URL to download images
+    base_url = os.getenv("BASE_URL", "http://localhost:8000")
     
     for i, item in enumerate(req.items):
         try:
